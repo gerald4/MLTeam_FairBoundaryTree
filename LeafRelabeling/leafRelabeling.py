@@ -14,39 +14,6 @@ Last modification : 16 November 2020
 
 # Librairies
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from matplotlib.patches import Patch
-from matplotlib import rcParams
-from matplotlib import gridspec
-params = {'axes.labelsize': 28,
-          'axes.grid': False,
-          'axes.linewidth': 1.6,
-          'axes.titlepad': 20,
-          'axes.xmargin': 0.05,
-          'axes.ymargin': 0.05,
-          'grid.alpha': 0.4,
-          'grid.color': '#666666',
-          'grid.linestyle': '-.',
-          'legend.fontsize': 42,
-          'legend.loc': 'lower right',
-          'xtick.labelsize': 28,
-          'xtick.major.width': 1.6,
-          'xtick.major.size': 10,
-          'xtick.minor.width': 1.0,
-          'xtick.minor.size': 4,
-          'ytick.labelsize': 28,
-          'ytick.major.width': 1.6,
-          'ytick.major.size': 10,
-          'ytick.minor.width': 1.0,
-          'ytick.minor.size': 4,
-          'text.usetex': True,
-          'figure.figsize': [12, 12],
-          'font.size': 42.0, 
-          'lines.markersize': np.sqrt(20) * 2.5,
-          'figure.autolayout': False,
-          }
-rcParams.update(params)
 from algebraicTree import algebraicTree
 from fairnessMetrics import getDisparateImpact, getDisparateMistreatment_overall, getDisparateMistreatment_fpfn
 
