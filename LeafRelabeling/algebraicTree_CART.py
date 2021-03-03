@@ -46,14 +46,17 @@ class algebraicTree_CART:
         
         path_to_leaves = []
         label_of_leaves = []
-        for index in list(dt.nodes.keys()):
-            if dt.nodes[index].feature == -2:
+        for index in list(self.tree.nodes.keys()):
+            if self.tree.nodes[index].feature == -2:
                 path = [index]
-                while dt.nodes[path[-1]].index_parent != -1:
-                    path.append(dt.nodes[path[-1]].index_parent)
+                while self.tree.nodes[path[-1]].index_parent != -1:
+                    path.append(self.tree.nodes[path[-1]].index_parent)
                 path.reverse()
                 path_to_leaves.append(path)
-                label_of_leaves.append(np.argmax(dt.nodes[path[-1]].stats))
+                if len(self.tree.nodes[path[-1]].y_unique) == 1:
+                    label_of_leaves.append(self.tree.nodes[path[-1]].y_unique[0])
+                else:
+                    label_of_leaves.append(np.argmax(self.tree.nodes[path[-1]].stats))
             
         return path_to_leaves, label_of_leaves
     
