@@ -75,6 +75,8 @@ class DecisionTree:
 
 	def fit(self, X, y):
 		y_unique, stats = np.unique(y, return_counts=True)
+		self.y_unique = y_unique
+
 		self.M = X.shape[1]
 		#Tree initialisation
 		root_node = Node(self.counter, -1, self.counter + 1, self.counter + 2, np.arange(X.shape[0]), y_unique, stats)
@@ -84,6 +86,8 @@ class DecisionTree:
 		self.nodes[root_node.index] = root_node
 		self.stack_nodes.append(root_node)
 		self.unvisited[root_node.index] = root_node
+
+
 		
 		drap = True
 		#BestFirstSearch
@@ -190,6 +194,24 @@ class DecisionTree:
 				node1_y_unique, node1_stats = np.unique(y[node.samples_index[set1]], return_counts=True)
 				node2_y_unique, node2_stats = np.unique(y[node.samples_index[set2]], return_counts=True)
 
+				#This place needs to be optimised: gnanfack edit, 10/03/2021
+				# node1_y_unique = list(node1_y_unique)
+				# node2_y_unique = list(node2_y_unique)
+
+				# node1_stats = np.zeros(y_unique.shape[0])   
+				# node2_stats = np.zeros(y_unique.shape[0])
+			
+				# for p in range(y_unique.shape[0]):
+				# 	if y_unique[p] in node1_y_unique:
+				# 		node1_stats[p] = node1_stats_[node1_y_unique.index(y_unique[p])]
+
+				# 	if y_unique[p] in node2_y_unique:
+				# 		node2_stats[p] = node2_stats_[node1_y_unique.index(y_unique[p])]
+
+
+				# #end edit
+
+
 				node1 = Node(node.left_node, node.index, self.counter, self.counter + 1, 
 													node.samples_index[set1], node1_y_unique, node1_stats)
 				node2 = Node(node.right_node, node.index, self.counter + 2, self.counter + 3,
@@ -243,11 +265,15 @@ class DecisionTree:
 		return Tree
 	
 	def predict(self, X):
-		
+
+		def map_node_y(n_unique):
+			return [list(self.y_unique).index(y) for y in n_unique]
+
+
 		def predict_univalue(x):
 			drap = False
 			node = self.nodes[0]
-			labels = np.zeros(node.y_unique.shape[0])
+			labels = np.zeros(self.y_unique.shape[0])
 			while not(drap):
 				if node.feature!= -2:
 					if x[node.feature] <= node.threshold:
@@ -256,8 +282,8 @@ class DecisionTree:
 						node = self.nodes[node.right_node]
 				else:
 					drap = True
-					labels[node.y_unique] = node.stats
-					return self.nodes[0].y_unique[np.argmax(labels)]
+					labels[map_node_y(node.y_unique)] = node.stats
+					return self.y_unique[np.argmax(labels)]
 				
 		y_predict = np.zeros(X.shape[0], dtype=self.nodes[0].y_unique.dtype)
 		
@@ -272,7 +298,7 @@ if __name__ == "__main__":
 	iris = datasets.load_iris()
 	
 	X = iris.data  
-	y = iris.target
+	y = iris.target - 2 
 
 	dt = DecisionTree(min_samples = 1, impurity_type = "gini", _lambda = 2., max_leaves = 15)
 
@@ -280,7 +306,7 @@ if __name__ == "__main__":
 	X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.30, random_state = 111)
 
 	dt.fit(X_train, y_train)
-
+	print(dt.predict(X_test))
 	print("Predictive accuracy: ", accuracy_score(dt.predict(X_test), y_test))
 
 	tree_graph = dt.builTree()
