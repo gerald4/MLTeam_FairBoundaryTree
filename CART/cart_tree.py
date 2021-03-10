@@ -246,7 +246,7 @@ class DecisionTree:
 		for node in self.nodes.values():
 			#print(node.index, node.y_unique, node.stats)
 			stats_update = np.zeros(y_unique.shape[0])
-			stats_update[node.y_unique] = node.stats
+			stats_update[self.map_node_y(node.y_unique)] = node.stats
 			impurity = np.round(self.impurity_func(node.stats))
 			n_samples = len(node.samples_index)
 			if node.feature != -2:
@@ -264,10 +264,10 @@ class DecisionTree:
 					Tree.edge(str(node.index_parent),str(node.index))#,label='\nFalse')
 		return Tree
 	
-	def predict(self, X):
-
-		def map_node_y(n_unique):
+	def map_node_y(self,n_unique):
 			return [list(self.y_unique).index(y) for y in n_unique]
+
+	def predict(self, X):
 
 
 		def predict_univalue(x):
@@ -282,7 +282,7 @@ class DecisionTree:
 						node = self.nodes[node.right_node]
 				else:
 					drap = True
-					labels[map_node_y(node.y_unique)] = node.stats
+					labels[self.map_node_y(node.y_unique)] = node.stats
 					return self.y_unique[np.argmax(labels)]
 				
 		y_predict = np.zeros(X.shape[0], dtype=self.nodes[0].y_unique.dtype)
