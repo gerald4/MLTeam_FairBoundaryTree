@@ -92,7 +92,8 @@ class DecisionTree:
 		drap = True
 		#BestFirstSearch
 		while len(self.stack_nodes)!=0 and len(self.nodes)  < 2 * self.max_leaves - 1 and drap: 
-			#print(len(self.nodes), len(self.unvisited), 2 * self.max_leaves - 1)
+			#print(len(self.nodes), 
+
 			#get the current node
 			for node in self.unvisited.values(): 
 				#Loop to search for feature
@@ -150,6 +151,10 @@ class DecisionTree:
 
 									tree_copy.nodes[node.left_node] = node1
 									tree_copy.nodes[node.right_node] = node2
+
+									#gnanfack edit: 11/03/2021, making nodes in stack_nodes leaves!
+									for node_s in tree_copy.stack_nodes:
+										node_s.update_split(feature = -2, threshold = -np.inf, gain = 0)
 
 									unfairness = tree_copy.unfairness_term(X, y)
 
@@ -232,6 +237,10 @@ class DecisionTree:
 			else:
 				drap = False
 
+		#gnanfack edit: 11/03/2021, making nodes in stack_nodes leaves!
+		for node in self.stack_nodes:
+			node.update_split(feature = -2, threshold = -np.inf, gain = 0)
+
 	def builTree(self, colnames = None, classnames = None):
 		y_unique = self.nodes[0].y_unique
 		
@@ -247,7 +256,7 @@ class DecisionTree:
 			#print(node.index, node.y_unique, node.stats)
 			stats_update = np.zeros(y_unique.shape[0])
 			stats_update[self.map_node_y(node.y_unique)] = node.stats
-			impurity = np.round(self.impurity_func(node.stats))
+			impurity = np.round(self.impurity_func(node.stats), 2)
 			n_samples = len(node.samples_index)
 			if node.feature != -2:
 				Tree.node(str(node.index), 
@@ -300,7 +309,7 @@ if __name__ == "__main__":
 	X = iris.data  
 	y = iris.target - 2 
 
-	dt = DecisionTree(min_samples = 1, impurity_type = "gini", _lambda = 2., max_leaves = 15)
+	dt = DecisionTree(min_samples = 1, impurity_type = "gini", _lambda = 2., max_leaves = 2)
 
 
 	X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.30, random_state = 111)
