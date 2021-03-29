@@ -2,7 +2,7 @@
 # cython: cdivision=True
 # cython: boundscheck=False
 # cython: wraparound=False
-# cython: profile=True
+# cython: profile=False
 
 # More info in _CART.pyx
 
@@ -48,8 +48,10 @@ cdef class Tree:
     cpdef void print_struct(self)
     cpdef void fit(self, np.ndarray[DOUBLE_t, ndim=2] X, np.ndarray[SIZE_t, ndim=1] y)
     cpdef SIZE_t[:] predict(self, double[:,:] X)
-    cdef double get_DI(self, double[:,:] X, list leaves, SIZE_t split, double threshold, 
-                       SIZE_t feature, SIZE_t value_1, SIZE_t value_2)
+    cdef double get_DI_cov(self, double[:,:] X, list leaves, SIZE_t split, double threshold, 
+                           SIZE_t feature, SIZE_t value_1, SIZE_t value_2)
     cdef double get_DI_corr(self, double[:,:] X, list leaves, SIZE_t split, double threshold, 
                             SIZE_t feature, SIZE_t value_1, SIZE_t value_2)
+    cpdef double compute_DI_cov(self, double[:,:] X)
+    cpdef double compute_DI_corr(self, double[:,:] X)
     cdef np.ndarray _get_node_ndarray(self)

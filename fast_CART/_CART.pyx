@@ -2,7 +2,7 @@
 # cython: cdivision=True
 # cython: boundscheck=False
 # cython: wraparound=False
-# cython: profile=True
+# cython: profile=False
 
 
 # Code inspired by the scikit-learn implementation
@@ -338,8 +338,7 @@ cdef class Tree:
                             weight = <double>p / <double>end
                             unfairness = self.get_DI_corr(X, [x for x in leaf_nodes if x != node_id], node_id, 
                                                      X_feat[p-1], feature, value_1, value_2)
-                            #print(unfairness, self.get_DI_corr(X, [x for x in leaf_nodes if x != node_id], node_id, 
-                            #                                   X_feat[p-1], feature, value_1, value_2))
+
                             gain = node.impurity - weight*impurity_1 - (1-weight)*impurity_2 - self._lambda*unfairness
 
                             if gain > _best_gain:
@@ -421,8 +420,8 @@ cdef class Tree:
         return predictions[:]
 
 
-    cdef double get_DI(self, double[:,:] X, list leaves, SIZE_t split, double threshold, 
-                       SIZE_t feature, SIZE_t value_1, SIZE_t value_2):
+    cdef double get_DI_cov(self, double[:,:] X, list leaves, SIZE_t split, double threshold, 
+                           SIZE_t feature, SIZE_t value_1, SIZE_t value_2):
 
         cdef:
             SIZE_t n_data = X.shape[0]
@@ -667,6 +666,164 @@ cdef class Tree:
                         proj[node.feature] = node.threshold
                     curr_node = node.parent
             
+                curr_dist = 0.0
+                for j in range(d):
+                    curr_dist += pow(proj[j] - X[i,j],2)
+                curr_dist = sqrt(curr_dist)
+
+                if curr_dist < dist:
+                    dist = curr_dist
+
+            if pred == 0:
+                dist = -1.0 * dist
+
+            all_dist[i] = dist
+            
+        # Computing mean values
+        for i in range(n_data):
+            z_bar += X[i,self.axis]
+            d_bar += all_dist[i]
+        z_bar = z_bar/n_data
+        d_bar = d_bar/n_data
+
+        # Computing standard deviation
+        for i in range(n_data):
+            cov_z += pow(abs(X[i,self.axis] - z_bar),2)
+            cov_d += pow(abs(all_dist[i] - d_bar),2)
+        cov_z = sqrt(cov_z/n_data)
+        cov_d = sqrt(cov_d/n_data)
+
+        for i in range(n_data):
+            DI += (X[i,self.axis] - z_bar) * all_dist[i]
+
+        return abs(DI * pow(n_data*cov_d*cov_z, -1.))
+
+
+    cpdef double compute_DI_cov(self, double[:,:] X):
+
+        cdef:
+            SIZE_t n_data = X.shape[0]
+            SIZE_t d = X.shape[1]
+            SIZE_t node_id, curr_node
+            SIZE_t pred
+            int i, j
+            double z_bar = 0.
+            double DI = 0.
+            double curr_dist, dist
+            double[:] all_dist = np.empty((n_data,), dtype=np.double)
+            double[:] proj = np.empty((d,), dtype=np.double)
+
+        for i in range(n_data):
+
+            # Predict the label of X[i,:]
+            node_id = 0
+            node = &self.nodes[node_id]
+            while node.feature != -2:
+                if X[i,node.feature] <= node.threshold:
+                    node_id = node.left_child
+                    node = &self.nodes[node_id]
+                else:
+                    node_id = node.right_child
+                    node = &self.nodes[node.right_child]
+
+            pred = node.value
+
+            # Go through each of the leaf nodes, except the new ones
+            dist = 1000000.
+            for node_id in range(self.node_count):
+                node = &self.nodes[node_id]
+                if node.value == pred or node.feature != -2:
+                    continue
+                
+                for j in range(d):
+                    proj[j] = X[i,j]
+
+                curr_node = node_id
+                while node.parent != _TREE_UNDEFINED:
+                    node = &self.nodes[node.parent]
+                    if node.left_child == curr_node:
+                        if proj[node.feature] > node.threshold:
+                            proj[node.feature] = node.threshold
+                    elif proj[node.feature] <= node.threshold:
+                        proj[node.feature] = node.threshold
+                    curr_node = node.parent
+
+                curr_dist = 0.0
+                for j in range(d):
+                    curr_dist += pow(proj[j] - X[i,j],2)
+                curr_dist = sqrt(curr_dist)
+
+                if curr_dist < dist:
+                    dist = curr_dist
+
+            if pred == 0:
+                dist = -1.0 * dist
+
+            all_dist[i] = dist
+            
+        # Computing mean values
+        for i in range(n_data):
+            z_bar += X[i,self.axis]
+        z_bar = z_bar/n_data
+
+        for i in range(n_data):
+            DI += (X[i,self.axis] - z_bar) * all_dist[i]
+
+        return abs(DI * pow(n_data, -1.))
+
+
+    cpdef double compute_DI_corr(self, double[:,:] X):
+
+        cdef:
+            SIZE_t n_data = X.shape[0]
+            SIZE_t d = X.shape[1]
+            SIZE_t node_id, curr_node
+            SIZE_t pred
+            int i, j
+            double z_bar = 0.
+            double cov_z = 0.
+            double d_bar = 0.
+            double cov_d = 0.
+            double DI = 0.
+            double curr_dist, dist
+            double[:] all_dist = np.empty((n_data,), dtype=np.double)
+            double[:] proj = np.empty((d,), dtype=np.double)
+
+        for i in range(n_data):
+
+            # Predict the label of X[i,:]
+            node_id = 0
+            node = &self.nodes[node_id]
+            while node.feature != -2:
+                if X[i,node.feature] <= node.threshold:
+                    node_id = node.left_child
+                    node = &self.nodes[node_id]
+                else:
+                    node_id = node.right_child
+                    node = &self.nodes[node.right_child]
+
+            pred = node.value
+
+            # Go through each of the leaf nodes, except the new ones
+            dist = 1000000.
+            for node_id in range(self.node_count):
+                node = &self.nodes[node_id]
+                if node.value == pred or node.feature != -2:
+                    continue
+                
+                for j in range(d):
+                    proj[j] = X[i,j]
+
+                curr_node = node_id
+                while node.parent != _TREE_UNDEFINED:
+                    node = &self.nodes[node.parent]
+                    if node.left_child == curr_node:
+                        if proj[node.feature] > node.threshold:
+                            proj[node.feature] = node.threshold
+                    elif proj[node.feature] <= node.threshold:
+                        proj[node.feature] = node.threshold
+                    curr_node = node.parent
+
                 curr_dist = 0.0
                 for j in range(d):
                     curr_dist += pow(proj[j] - X[i,j],2)
