@@ -1,7 +1,8 @@
 # cython: language_level=3
-# cython: cdivision=False
-# cython: boundscheck=True
-# cython: wraparound=True
+# cython: cdivision=True
+# cython: boundscheck=False
+# cython: wraparound=False
+# cython: profile=True
 
 # More info in _CART.pyx
 
@@ -29,6 +30,7 @@ cdef class Tree:
     cdef public SIZE_t max_leaves
     cdef public double _lambda
     cdef public str impurity_type
+    cdef public SIZE_t axis
 
     # Inner structures: values are stored separately from node structure,
     # since size is determined at runtime.
@@ -40,9 +42,14 @@ cdef class Tree:
     cdef void _add_node(self, SIZE_t parent, bint is_left, bint is_leaf, SIZE_t feature, 
                         double threshold, double impurity, SIZE_t value) nogil
     cdef void _update_node(self, SIZE_t node_id, SIZE_t feature, double threshold) nogil
-    cdef double entropy(self, np.ndarray[SIZE_t, ndim=1] freq)
-    cdef double gini(self, np.ndarray[SIZE_t, ndim=1] freq)
+    cdef double entropy(self, double[:] freq, SIZE_t n) nogil
+    cdef double gini(self, double[:] freq, SIZE_t n) nogil
     cdef void _resize_c(self) nogil
     cpdef void print_struct(self)
     cpdef void fit(self, np.ndarray[DOUBLE_t, ndim=2] X, np.ndarray[SIZE_t, ndim=1] y)
+    cpdef SIZE_t[:] predict(self, double[:,:] X)
+    cdef double get_DI(self, double[:,:] X, list leaves, SIZE_t split, double threshold, 
+                       SIZE_t feature, SIZE_t value_1, SIZE_t value_2)
+    cdef double get_DI_corr(self, double[:,:] X, list leaves, SIZE_t split, double threshold, 
+                            SIZE_t feature, SIZE_t value_1, SIZE_t value_2)
     cdef np.ndarray _get_node_ndarray(self)
