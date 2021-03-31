@@ -336,7 +336,7 @@ cdef class Tree:
 
                             # Computing how good this split is
                             weight = <double>p / <double>end
-                            unfairness = self.get_DI_corr(X, [x for x in leaf_nodes if x != node_id], node_id, 
+                            unfairness = self.get_DI_cov(X, [x for x in leaf_nodes if x != node_id], node_id, 
                                                      X_feat[p-1], feature, value_1, value_2)
 
                             gain = node.impurity - weight*impurity_1 - (1-weight)*impurity_2 - self._lambda*unfairness
@@ -444,21 +444,19 @@ cdef class Tree:
             node_id = 0
             node = &self.nodes[node_id]
             while node.feature != -2:
-                if node_id != split:
-                    if X[i,node.feature] <= node.threshold:
-                        node_id = node.left_child
-                        node = &self.nodes[node_id]
-                    else:
-                        node_id = node.right_child
-                        node = &self.nodes[node.right_child]
+                if X[i,node.feature] <= node.threshold:
+                    node_id = node.left_child
+                    node = &self.nodes[node_id]
                 else:
-                    if X[i,feature] <= threshold:
-                        pred = value_1
-                    else:
-                        pred = value_2
-                    break
+                    node_id = node.right_child
+                    node = &self.nodes[node_id]
 
-            if node.feature == -2:
+            if node_id == split:
+                if X[i,feature] <= threshold:
+                    pred = value_1
+                else:
+                    pred = value_2
+            else:
                 pred = node.value
 
             # Go through each of the leaf nodes, except the new ones
@@ -575,21 +573,19 @@ cdef class Tree:
             node_id = 0
             node = &self.nodes[node_id]
             while node.feature != -2:
-                if node_id != split:
-                    if X[i,node.feature] <= node.threshold:
-                        node_id = node.left_child
-                        node = &self.nodes[node_id]
-                    else:
-                        node_id = node.right_child
-                        node = &self.nodes[node.right_child]
+                if X[i,node.feature] <= node.threshold:
+                    node_id = node.left_child
+                    node = &self.nodes[node_id]
                 else:
-                    if X[i,feature] <= threshold:
-                        pred = value_1
-                    else:
-                        pred = value_2
-                    break
+                    node_id = node.right_child
+                    node = &self.nodes[node_id]
 
-            if node.feature == -2:
+            if node_id == split:
+                if X[i,feature] <= threshold:
+                    pred = value_1
+                else:
+                    pred = value_2
+            else:
                 pred = node.value
 
             # Go through each of the leaf nodes, except the new ones
