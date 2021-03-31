@@ -689,10 +689,12 @@ cdef class Tree:
         cov_z = sqrt(cov_z/n_data)
         cov_d = sqrt(cov_d/n_data)
 
-        for i in range(n_data):
-            DI += (X[i,self.axis] - z_bar) * all_dist[i]
-
-        return abs(DI * pow(n_data*cov_d*cov_z, -1.))
+        if cov_d != 0. and cov_z != 0.:
+            for i in range(n_data):
+                DI += (X[i,self.axis] - z_bar) * all_dist[i]
+            return abs(DI * pow(n_data*cov_d*cov_z, -1.))
+        else:
+            return 0.
 
 
     cpdef double compute_DI_cov(self, double[:,:] X):
@@ -847,10 +849,12 @@ cdef class Tree:
         cov_z = sqrt(cov_z/n_data)
         cov_d = sqrt(cov_d/n_data)
 
-        for i in range(n_data):
-            DI += (X[i,self.axis] - z_bar) * all_dist[i]
-
-        return abs(DI * pow(n_data*cov_d*cov_z, -1.))
+        if cov_d != 0. and cov_z != 0.:
+            for i in range(n_data):
+                DI += (X[i,self.axis] - z_bar) * all_dist[i]
+            return abs(DI * pow(n_data*cov_d*cov_z, -1.))
+        else:
+            return 0.
 
 
     cdef np.ndarray _get_node_ndarray(self):
