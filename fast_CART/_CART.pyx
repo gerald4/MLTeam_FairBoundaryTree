@@ -327,7 +327,7 @@ cdef class Tree:
                                 impurity_1 = self.gini(stats, len(stats))
 
                             # Right child node
-                            stats = np.bincount(y_feat[p::]).astype(np.double)
+                            stats = np.bincount(y_feat[p:]).astype(np.double)
                             value_2 = np.argmax(stats)
                             if self.impurity_type == 'entropy':
                                 impurity_2 = self.entropy(stats, len(stats))
@@ -368,6 +368,7 @@ cdef class Tree:
                     splittable_nodes.remove(node_id)
 
             # Update the tree by performing the best split, if it exists
+
             if not best_gain > 0:
                 break
 
