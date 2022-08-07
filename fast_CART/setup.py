@@ -4,11 +4,11 @@ from Cython.Distutils import build_ext
 import numpy as np
 
 setup(
-    name = '_CART',
+    name = 'fastCART',
     ext_modules=[
         Extension('_CART',
                   sources=['_CART.pyx'],
-                  extra_compile_args=['/Ox'],
+                  extra_compile_args=['-O3'],
                   language='c++')
         ],
     include_dirs=[np.get_include()],

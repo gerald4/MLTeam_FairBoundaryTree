@@ -32,6 +32,8 @@ cdef class Tree:
     cdef public str impurity_type
     cdef public SIZE_t axis
 
+    cdef public str fair_measure
+
     # Inner structures: values are stored separately from node structure,
     # since size is determined at runtime.
     cdef public SIZE_t node_count        # Counter for node IDs
@@ -45,7 +47,7 @@ cdef class Tree:
     cdef double entropy(self, double[:] freq, SIZE_t n) nogil
     cdef double gini(self, double[:] freq, SIZE_t n) nogil
     cdef void _resize_c(self) nogil
-    cpdef void print_struct(self)
+    #cpdef void print_struct(self)
     cpdef void fit(self, np.ndarray[DOUBLE_t, ndim=2] X, np.ndarray[SIZE_t, ndim=1] y)
     cpdef SIZE_t[:] predict(self, double[:,:] X)
     cdef double get_DI_cov(self, double[:,:] X, list leaves, SIZE_t split, double threshold, 
@@ -55,3 +57,7 @@ cdef class Tree:
     cpdef double compute_DI_cov(self, double[:,:] X)
     cpdef double compute_DI_corr(self, double[:,:] X)
     cdef np.ndarray _get_node_ndarray(self)
+    cdef dict print_tree_to_dict(self)
+
+    cpdef double get_DM_corrget_DI_corr(self, double[:,:] X, int[:] leaves, SIZE_t split, double threshold, 
+                            SIZE_t feature, SIZE_t value_1, SIZE_t value_2, int [:] y)
