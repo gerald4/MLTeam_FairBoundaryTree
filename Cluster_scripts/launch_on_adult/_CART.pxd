@@ -32,6 +32,7 @@ cdef class Tree:
     cdef public double _lambda
     cdef public str impurity_type
     cdef public SIZE_t axis
+    cdef public str fair_measure
 
     # Inner structures: values are stored separately from node structure,
     # since size is determined at runtime.
@@ -57,3 +58,8 @@ cdef class Tree:
     cpdef double compute_DI_corr(self, double[:,:] X)
     cpdef np.ndarray[DOUBLE_t, ndim=1] get_DT_features_count(self, n_features)
     cdef np.ndarray _get_node_ndarray(self)
+
+    cpdef double compute_DM_corr(self, double[:,:] X, int[:] y):
+
+
+    cdef dict print_tree_to_dict(self)

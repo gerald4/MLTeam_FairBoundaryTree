@@ -54,13 +54,14 @@ cdef class Tree:
 
 
     def __cinit__(self, SIZE_t min_samples, SIZE_t max_leaves, double _lambda, 
-                  str impurity_type='gini', SIZE_t axis=0):
+                  str impurity_type='gini', SIZE_t axis=0, str fair_measure = "DI"):
         """Initialization."""
         self.min_samples = min_samples
         self.max_leaves = max_leaves
         self._lambda = _lambda
         self.impurity_type = impurity_type
         self.axis = axis
+        self.fair_measure = fair_measure
 
         self.capacity = 2*max_leaves - 1
 
@@ -335,8 +336,12 @@ cdef class Tree:
 
                             # Computing how good this split is
                             weight = <double>p / <double>end
-                            unfairness = self.get_DI_corr(X, np.array(leaf_nodes).astype(np.int32), node_id, (X_feat[p-1] + X_feat[p])/2.0, feature, value_1, value_2)
 
+                            if self.fair_measure == "DI"
+                                unfairness = self.get_DI_corr(X, np.array(leaf_nodes).astype(np.int32), node_id, (X_feat[p-1] + X_feat[p])/2.0, feature, value_1, value_2)
+                            elif self.fair_measure =="DM":
+                                unfairness = self.get_DM_corr(X, y, np.array(leaf_nodes).astype(np.int32), node_id, (X_feat[p-1] + X_feat[p])/2.0, feature, value_1, value_2)
+                            
                             pure_gain = node.impurity - weight*impurity_1 - (1.-weight)*impurity_2
                             gain = pure_gain - self._lambda*unfairness
                             
@@ -908,3 +913,109 @@ cdef class Tree:
                                    np.NPY_DEFAULT, None)
         Py_INCREF(self)
         return arr
+
+    cdef dict print_tree_to_dict(self):
+        """
+        This fucntion returns the tree in a dictionnary of nodes
+        """
+        cdef:
+            SIZE_t i
+            Node* node
+            dict dico
+            str structure = ""
+
+        for i in range(self.node_count):
+            node = &self.nodes[i]
+            dico[i] = np.array([node.parent, node.left_child, node.right_child, node.feature, node.threshold, node.impurity, node.gain, node.value])
+
+        return dico
+
+
+    cpdef double compute_DM_corr(self, double[:,:] X, int[:] y):
+
+        cdef:
+            SIZE_t n_data = np.shape(X)[0]
+            SIZE_t d = np.shape(X)[1]
+            SIZE_t node_id, curr_node
+            SIZE_t pred
+            SIZE_t i, j
+            Node* node
+            double z_bar = 0.
+            double cov_z = 0.
+            double d_bar = 0.
+            double cov_d = 0.
+            double DI = 0.
+            double curr_dist, dist
+            double[:] all_dist = np.empty((n_data,), dtype=np.double)
+            double[:] proj = np.empty((d,), dtype=np.double)
+
+        for i in range(n_data):
+
+            # Predict the label of X[i,:]
+            node_id = 0
+            node = &self.nodes[node_id]
+            while node.feature != -2:
+                if X[i,node.feature] <= node.threshold:
+                    node_id = node.left_child
+                    node = &self.nodes[node_id]
+                else:
+                    node_id = node.right_child
+                    node = &self.nodes[node_id]
+
+            pred = node.value
+
+            # Go through each of the leaf nodes, except the new ones
+            dist = 1000000.
+            for node_id in range(self.node_count):
+                node = &self.nodes[node_id]
+                if node.value == pred or node.feature != -2:
+                    continue
+                
+                for j in range(d):
+                    proj[j] = X[i,j]
+
+                curr_node = node_id
+                while node.parent != _TREE_UNDEFINED:
+                    node = &self.nodes[node.parent]
+                    if node.left_child == curr_node:
+                        if proj[node.feature] > node.threshold:
+                            proj[node.feature] = node.threshold
+                    elif proj[node.feature] <= node.threshold:
+                        proj[node.feature] = node.threshold
+                    curr_node = node.parent
+
+                curr_dist = 0.0
+                for j in range(d):
+                    curr_dist += pow(proj[j] - X[i,j], 2.)
+                curr_dist = sqrt(curr_dist)
+
+                if curr_dist < dist:
+                    dist = curr_dist
+
+            if pred == y[i]:
+                dist = 0
+            else:
+                dist = - dist
+                
+            all_dist[i] = dist
+            
+        # Computing mean values
+        for i in range(n_data):
+            z_bar += X[i,self.axis]
+            d_bar += all_dist[i]
+        z_bar = z_bar/n_data
+        d_bar = d_bar/n_data
+
+        # Computing standard deviation
+        for i in range(n_data):
+            cov_z += pow(abs(X[i,self.axis] - z_bar), 2.)
+            cov_d += pow(abs(all_dist[i] - d_bar), 2.)
+        cov_z = sqrt(cov_z/n_data)
+        cov_d = sqrt(cov_d/n_data)
+
+        if cov_d != 0. and cov_z != 0.:
+            for i in range(n_data):
+                DI += (X[i,self.axis] - z_bar) * all_dist[i]
+            return abs(DI * pow(n_data*cov_d*cov_z, -1.))
+        else:
+            return 0.
